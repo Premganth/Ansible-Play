@@ -1,0 +1,50 @@
+---
+  - name: "installing apache and configured its port to 9999"
+    hosts: httpd
+    become: true
+
+    tasks:
+      - name: Install Httpd
+        yum:
+          name: httpd
+          state: latest
+
+      - name: copy index file
+        copy:
+          src: /home/student/project/index.html
+          dest: /var/www/html/index.html
+
+      - name: change the default port
+        replace:
+          path: /etc/httpd/conf/httpd.conf
+          regexp: '^Listen 80$'
+          replace: 'Listen 9999'
+
+      - name: Configure firewall
+        firewalld:
+          port: 9999/tcp
+          permanent: true
+          state: enabled
+
+      - name: enable firewall
+        service:
+          name: firewalld
+          state: restarted
+
+      - name: Set SELinux to enforcing mode
+        selinux:
+          policy: targeted
+          state: enforcing
+
+      - name: Set custom SELinux port for Apache
+        seport:
+          ports: 9999
+          proto: tcp
+          setype: http_port_t
+          state: present
+
+      - name: Restart httpd to apply SELinux changes
+        service:                           
+          name: httpd
+          state: started
+          enabled: yes
